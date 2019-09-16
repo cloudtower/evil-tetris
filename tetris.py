@@ -162,12 +162,10 @@ def draw_title():
     window.refresh()
 
 
-def draw_footer():
-    title = "Made with"
+def draw_footer(msg=""):
     window = curses.newwin(1, FOOTER_WIDTH, TITLE_HEIGHT + GAME_WINDOW_HEIGHT + 1, LEFT_MARGIN)
-    col_pos = int((GAME_WINDOW_WIDTH + STATUS_WINDOW_WIDTH - len(title) + 1) / 2)
-    window.addstr(0, col_pos, title, curses.color_pair(98))
-    window.addstr(0, col_pos + len(title) + 1, "❤", curses.color_pair(97))
+    col_pos = int((GAME_WINDOW_WIDTH + STATUS_WINDOW_WIDTH - len(msg) + 1) / 2)
+    window.addstr(0, col_pos, msg, curses.color_pair(98))
 
     window.refresh()
 
@@ -205,6 +203,7 @@ if __name__ == "__main__":
 
         quit_game = False
         while not quit_game:
+            draw_footer(game_board.niceness)
             key_event = game_window.getch()
 
             # hack: redraw it on resize

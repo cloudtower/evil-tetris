@@ -65,6 +65,7 @@ import random
 import os
 
 BEST_SCORE_FILE_NAME = "best_score"
+MIN_AVG_BLOCK_APPERANCE = 0.1
 
 block_shapes = [
     # T Block
@@ -96,12 +97,17 @@ class Board:
         self.current_block_pos = None
         self.current_block = None
         self.next_block = None
+        self.past_blocks = [0, 0, 0, 0, 0]
+        self.blocks_total = 0
 
         self.game_over = False
         self.score = None
         self.lines = None
         self.best_score = None
         self.level = None
+        self.niceness = ""
+        self.gap = False
+        self.gap_was_closed = False
 
     def start(self):
         """Start game"""
@@ -171,12 +177,13 @@ class Board:
     def _place_new_block(self):
         """Place new block and generate the next one"""
 
-        if self.next_block is None:
-            self.current_block = self._get_new_block()
-            self.next_block = self._get_new_block()
+        if self.blocks_total < 5:
+            next_block = self._get_random_block(ign_stats=False)
         else:
-            self.current_block = self.next_block
-            self.next_block = self._get_new_block()
+            next_block = self._get_new_block()
+
+        self.current_block = next_block
+        self.next_block = self._get_random_block()
 
         size = Block.get_size(self.current_block.shape)
         col_pos = math.floor((self.width - size[1]) / 2)
@@ -238,6 +245,107 @@ class Board:
             with open(BEST_SCORE_FILE_NAME, "w") as file:
                 file.write(str(self.score))
 
+    def _check_fits(self):
+        """Check if an s-piece can be placed without holes"""
+
+        highest_blocks = [self.height] * len(self.board[0])
+        check = list(range(len(self.board[0])))
+        for row in range(self.height):
+            if not check:
+                break
+            to_remove = []
+            for col in check:
+                if self.board[row][col]:
+                    highest_blocks[col] = row
+                    to_remove.append(col)
+            for col in to_remove:
+                check.remove(col)
+
+        impossible = {
+            (1, True),
+            (1, False),
+            (2, True),
+            (2, False),
+            (3, True),
+        }
+
+        possible = set()
+
+        for col, row in enumerate(highest_blocks[:-1]): # s rotate
+            if highest_blocks[col + 1] == row + 1:
+                possible.add((2, False))
+        
+        for col, row in list(enumerate(highest_blocks))[2:]: # s
+            if highest_blocks[col - 1] == row + 1 and highest_blocks[col - 2] == row + 1:
+                possible.add((2, False))
+
+        for col, row in list(enumerate(highest_blocks))[1:]: # s inv rotate
+            if highest_blocks[col - 1] == row + 1:
+                possible.add((2, True))
+        
+        for col, row in enumerate(highest_blocks[:-2]): # s inv
+            if highest_blocks[col + 1] == row + 1 and highest_blocks[col + 2] == row + 1:
+                possible.add((2, True))
+
+        for col, row in enumerate(highest_blocks[:-1]): # l, l inv, o
+            if highest_blocks[col + 1] == row:
+                possible.add((1, True))
+                possible.add((1, False))
+                possible.add((3, True))
+
+        for col, row in enumerate(highest_blocks[:-2]): # l rotate 3, l inv rotate 1
+            if highest_blocks[col + 1] == row and highest_blocks[col + 2] == row:
+                possible.add((1, True))
+                possible.add((1, False))
+
+        for col, row in list(enumerate(highest_blocks))[2:]: # l rotate 1
+            if highest_blocks[col - 1] == row and highest_blocks[col - 2] == row - 1:
+                possible.add((1, False))
+
+        for col, row in enumerate(highest_blocks[:-2]): # l inv rotate 3
+            if highest_blocks[col + 1] == row and highest_blocks[col + 2] == row - 1:
+                possible.add((1, True))
+
+        for col, row in enumerate(highest_blocks[:-1]): # l rotate 2
+            if highest_blocks[col + 1] == row - 2:
+                possible.add((1, False))
+
+        for col, row in list(enumerate(highest_blocks))[1:]: # l inv rotate 2
+            if highest_blocks[col - 1] == row - 2:
+                possible.add((1, True))
+        
+        impossible -= possible
+        possible = set()
+
+        was_gap = self.gap
+        self.gap = False
+
+        for col, row in enumerate(highest_blocks): # l inv rotate 3
+            if col == 0:
+                if highest_blocks[col + 1] < row - 2:
+                    self.gap = True
+            elif col == len(highest_blocks) - 1:
+                if highest_blocks[col - 1] < row - 2:
+                    self.gap = True
+            elif highest_blocks[col + 1] > row + 2 and highest_blocks[col + 2] < highest_blocks[col + 1] - 2:
+                self.gap = True
+
+        if self.gap:
+            possible.add((4, True))
+            possible.add((4, False))
+        elif was_gap:
+            self.gap_was_closed = True
+
+        for col, row in enumerate(highest_blocks[:-1]): # l rotate 2
+            if highest_blocks[col + 1] == row - 2 and (col == len(highest_blocks) - 2 or highest_blocks[col + 2] <= row):
+                possible.add((1, False))
+
+        for col, row in list(enumerate(highest_blocks))[1:]: # l inv rotate 2
+            if highest_blocks[col - 1] == row - 2 and (col == 1 or highest_blocks[col - 2] <= row):
+                possible.add((1, True))
+        
+        return list(impossible), list(possible)
+
     @staticmethod
     def _read_best_score():
         """Read best score from file"""
@@ -247,14 +355,50 @@ class Board:
                 return int(file.read())
         return 0
 
-    @staticmethod
-    def _get_new_block():
+    def _get_new_block(self):
         """Get random block"""
 
-        block = Block(random.randint(0, len(block_shapes) - 1))
+        impossible, possible = self._check_fits()
 
-        # flip it randomly
-        if random.getrandbits(1):
+        if self.gap_was_closed:
+            self.gap_was_closed = False
+            choice = 4
+            flip = False
+            self.niceness = ">:D"
+        else:
+            for i in self.past_blocks:
+                if self.blocks_total and i / self.blocks_total:
+                    choice = i
+                    self.niceness = "!!!"
+            else:
+                if not impossible:
+                    choice, flip = (random.randint(0, len(block_shapes) - 1), bool(random.getrandbits(1)))
+                    while (choice, flip) in possible:
+                        choice, flip = (random.randint(0, len(block_shapes) - 1), bool(random.getrandbits(1)))
+                    self.niceness = "---"
+                else:
+                    choice, flip = random.choice(impossible)
+                    self.niceness = ">:)"
+
+        self.blocks_total += 1
+        block = Block(choice)
+        self.past_blocks[choice] += 1
+
+        if flip:
+            block.flip()
+
+        return block
+
+    def _get_random_block(self, ign_stats=True):
+        choice, flip = (random.randint(0, len(block_shapes) - 1), bool(random.getrandbits(1)))
+
+        block = Block(choice)
+
+        if not ign_stats:
+            self.blocks_total += 1
+            self.past_blocks[choice] += 1
+
+        if flip:
             block.flip()
 
         return block

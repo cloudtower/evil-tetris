@@ -1,9 +1,10 @@
 # Tetris in terminal
 
-Classic version of tile-matching puzzle video game made in Python3 and
-courses
+This is an evil version of shkolovy's [classic tetris game](https://github.com/shkolovy/tetris-terminal) that tries to bully you whereever it can. Whenever there is a piece that you cannot fit anywhere, it will be given to you. Play and discover more of the annoying sh.t it throws at you!
 
-![ScreenShot](https://raw.githubusercontent.com/shkolovy/tetris-terminal/master/screenshots/game.png)
+There were also some small changes to make the game feel more similar to tetris-bsd.
+
+![ScreenShot](https://raw.githubusercontent.com/cloudtower/evil-tetris/master/screenshots/game.png)
 
 **Controls**
 - Move     - j h l
@@ -20,12 +21,3 @@ courses
 
 **Levels**
 - each 10 burnt lines speed will be increased
-
-
-#### Play on mac
-
-build it `PyInstaller tetris.py --onefile` and add *path* to the .bash_profile
-
-`export PATH="/Users/your_name/tetris-terminal:$PATH"`
-
-type in terminal and play :) `>tetris`
