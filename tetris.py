@@ -7,6 +7,7 @@
 
 """
 
+import os
 import curses
 import board
 import time
@@ -136,9 +137,9 @@ def draw_help_window():
 
     window.border()
 
-    window.addstr(1, 2, "Move    - ← ↓ →")
+    window.addstr(1, 2, "Move    - j h l")
     window.addstr(2, 2, "Drop    - space")
-    window.addstr(3, 2, "Rotate  - ↑")
+    window.addstr(3, 2, "Rotate  - k")
     window.addstr(4, 2, "Pause   - p")
     window.addstr(5, 2, "Quit    - q")
 
@@ -179,6 +180,8 @@ old_score = game_board.score
 
 if __name__ == "__main__":
     try:
+        os.putenv("TERM", "xterm-256color")
+
         scr = curses.initscr()
         curses.beep()
         curses.noecho()
@@ -219,14 +222,14 @@ if __name__ == "__main__":
                         game_board.move_block("down")
                         start = time.time()
 
-                    if key_event == curses.KEY_UP:
+                    if key_event == ord("k"):
                         game_board.rotate_block()
-                    elif key_event == curses.KEY_DOWN:
-                        game_board.move_block("down")
-                    elif key_event == curses.KEY_LEFT:
+                    elif key_event == ord("j"):
                         game_board.move_block("left")
-                    elif key_event == curses.KEY_RIGHT:
+                    elif key_event == ord("l"):
                         game_board.move_block("right")
+                    elif key_event == ord("h"):
+                        game_board.move_block("down")
                     elif key_event == ord(" "):
                         game_board.drop()
                 if key_event == ord("p"):

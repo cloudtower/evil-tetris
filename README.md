@@ -6,9 +6,9 @@ courses
 ![ScreenShot](https://raw.githubusercontent.com/shkolovy/tetris-terminal/master/screenshots/game.png)
 
 **Controls**
-- Move     - ← ↓ →
+- Move     - j h l
 - Drop     - Space
-- Rotate   - ↑
+- Rotate   - k 
 - Pause    - p
 - Quit     - q
 - New Game - Enter
